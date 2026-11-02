@@ -24,7 +24,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Empório da Música — assistente virtual")
     parser.add_argument("--session", help="session id to resume (history is saved in SQLite)")
     parser.add_argument("--debug", action="store_true", help="show tool calls and their results")
-    parser.add_argument("--model", help="Gemini model (default: GEMINI_MODEL or gemini-2.5-flash)")
+    parser.add_argument("--model", help="Gemini model (default: GEMINI_MODEL or gemini-3.5-flash)")
     args = parser.parse_args()
 
     if not os.getenv("GEMINI_API_KEY"):

@@ -9,6 +9,7 @@ Claude Haiku) means rewriting `_generate` and the history format only.
 """
 
 import json
+import logging
 import os
 import time
 from collections.abc import Callable
@@ -25,8 +26,10 @@ from .schema import declaration_for
 from .tools import TOOLS, TOOLS_BY_NAME
 
 load_dotenv()
+log = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.5-flash"
+DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite"  # empty string disables the fallback
 MAX_TOOL_ROUNDS = 6      # safety net against tool-calling loops
 MAX_HISTORY = 40         # contents sent to the model (DB keeps everything)
 RETRYABLE = {429, 500, 503}
@@ -65,6 +68,7 @@ class Agent:
                  persist: bool = True, on_tool_call: Callable[[ToolCall], None] | None = None):
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
         self.model = model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL
+        self.fallback_model = os.getenv("GEMINI_FALLBACK_MODEL", DEFAULT_FALLBACK_MODEL)
         self.session_id = session_id
         self.on_tool_call = on_tool_call
         self.tools = [types.Tool(function_declarations=[declaration_for(t) for t in TOOLS])]
@@ -90,14 +94,19 @@ class Agent:
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.3,
         )
+        # Free-tier models are often overloaded (503) or rate limited (429):
+        # alternate between the main and the fallback model, backing off a bit.
+        models = [self.model, self.fallback_model] if self.fallback_model else [self.model]
         for attempt in range(4):
+            model = models[attempt % len(models)]
             try:
                 return self.client.models.generate_content(
-                    model=self.model, contents=self._window(), config=config)
+                    model=model, contents=self._window(), config=config)
             except errors.APIError as exc:
                 if exc.code not in RETRYABLE or attempt == 3:
                     raise
-                time.sleep(2 ** attempt * 5)  # free tier rate limits: 5s, 10s, 20s
+                log.info("Gemini API %s on %s, retrying (attempt %d)", exc.code, model, attempt + 1)
+                time.sleep(3 * attempt)
 
     def reply(self, message: str) -> Turn:
         start = len(self.history)
@@ -123,8 +132,9 @@ class Agent:
                     if self.on_tool_call:
                         self.on_tool_call(tool_call)
                     parts.append(types.Part.from_function_response(name=call.name, response=result))
-                self.history.append(types.Content(role="tool", parts=parts))
-        except errors.APIError:
+                self.history.append(types.Content(role="user", parts=parts))
+        except errors.APIError as exc:
+            log.warning("Gemini API error: %s %s", exc.code, exc.message)
             # Roll back the incomplete turn so the history stays consistent
             del self.history[start:]
             return Turn(reply=FALLBACK_REPLY, tool_calls=turn.tool_calls)

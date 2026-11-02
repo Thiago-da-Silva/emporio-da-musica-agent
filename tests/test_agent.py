@@ -34,8 +34,8 @@ def test_tool_round_trip(monkeypatch, tmp_path):
     assert turn.reply == "O Takamine GD20 custa R$ 2.199,00."
     assert [c.name for c in turn.tool_calls] == ["search_products"]
     assert turn.tool_calls[0].result["produtos"][0]["product_id"] == 95
-    # user, model(function_call), tool(response), model(text)
-    assert [c.role for c in agent.history] == ["user", "model", "tool", "model"]
+    # user, model(function_call), user(function_response), model(text)
+    assert [c.role for c in agent.history] == ["user", "model", "user", "model"]
 
 
 def test_float_ids_are_coerced_and_bad_args_reported(monkeypatch, tmp_path):
@@ -63,7 +63,7 @@ def test_window_never_starts_with_tool_response(monkeypatch, tmp_path):
     agent.history = [
         types.Content(role="user", parts=[types.Part(text="a")]),
         types.Content(role="model", parts=[types.Part(function_call=types.FunctionCall(name="x"))]),
-        types.Content(role="tool", parts=[types.Part.from_function_response(name="x", response={})]),
+        types.Content(role="user", parts=[types.Part.from_function_response(name="x", response={})]),
         types.Content(role="model", parts=[types.Part(text="b")]),
         types.Content(role="user", parts=[types.Part(text="c")]),
     ]
