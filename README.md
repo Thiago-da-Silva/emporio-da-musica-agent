@@ -180,11 +180,12 @@ Recorded from the real agent with `python -m examples.generate` (replies unedite
 
 I used **Claude Code** (Anthropic's CLI agent, model Claude Opus 5.5) as a pair programmer throughout the project:
 
-1. **Analysis**: it read the challenge PDF, the policy manual and the CSVs, and produced a list of data inconsistencies (phone conflict, mismatched descriptions, order totals, product statuses) that became the "Data treatment" table above.
+1. **Context and requirements**: I gave it the challenge brief and the store's data, together with my constraints (free model, 2-day deadline, docs in English, only useful files in the repository). Before any code was written it mapped the data inconsistencies (phone conflict, mismatched descriptions, order totals, product statuses), which became the "Data treatment" table above.
 2. **Decisions**: it proposed an architecture with trade-offs for each choice; I made the calls (Gemini for cost, Portuguese persona with English code/docs, CLI, scope cuts for the 2-day deadline, one commit per project part).
-3. **Implementation**: it wrote the code module by module, each part with tests, while I reviewed and steered.
+3. **Module by module, under my supervision**: data, tools, agent loop, CLI, evals, examples and README, each with its own tests and commit. I followed the development as it happened and questioned choices along the way; nothing went to GitHub before my approval.
 4. **Debugging with the real API**: the first real run surfaced issues that unit tests with a fake model could not (deprecated model for new keys, wrong role for function responses, overloaded free models), which led to the fallback model.
 5. **Prompt iteration driven by evals**: the eval set caught an out-of-scope answer; the prompt was adjusted and re-evaluated.
+6. **Final human validation**: before submitting, I tested the agent myself in the terminal with my own conversations, beyond the automated tests and evals.
 
 What I kept for myself: the final decisions, reviewing every change, and validating the behaviour in the chat.
 
