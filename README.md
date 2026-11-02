@@ -42,20 +42,22 @@ Type `/sair` to leave the chat.
 
 ```
             ┌──────────────────────────── Agent loop (agent.py) ─────────────────────────────┐
- customer ─►│ system prompt (persona + rules + current time/open status) + history window      │
-            │                │                                                                 │
-            │                ▼                                                                 │
-            │         Gemini (function calling) ──► tool call? ──yes──► validate args ──► run │
-            │                ▲                          │no                         (pydantic)  │
-            │                └──── tool result ◄────────┼──────────────────────────────────────┘
-            │                                           ▼                                      │
-            └─────────────────────────────────── reply ─► SQLite (history per session)       ┘
+ customer ─►│ system prompt (persona + rules + time/open status) + history window            │
+            │              │                                                                 │
+            │              ▼                                                                 │
+            │   Gemini (function calling) ──► tool call? ──yes──► validate args ──► run      │
+            │              ▲                      │ no            (pydantic)         │       │
+            │              └──── tool result ◄────┼──────────────────────────────────┘       │
+            │                                     ▼                                          │
+            │                             reply ─► SQLite (history per session)              │
+            └────────────────────────────────────────────────────────────────────────────────┘
 
  Tools (tools.py, plain Python, deterministic)
-   search_products ─ get_product_details ─ calculate_payment_options ─ list_active_promotions   ◄─ data/*.csv
-   get_order_status (order id + e-mail/phone)                                                  ◄─ data/*.csv
-   get_store_policy(topic)                                                                     ◄─ data/policies.md
-   create_support_ticket                                                                       ─► SQLite
+   search_products, get_product_details,
+   calculate_payment_options, list_active_promotions   ◄─ data/*.csv
+   get_order_status (order id + e-mail/phone)          ◄─ data/*.csv
+   get_store_policy(topic)                             ◄─ data/policies.md
+   create_support_ticket                               ─► SQLite
 ```
 
 | Module | Responsibility |
